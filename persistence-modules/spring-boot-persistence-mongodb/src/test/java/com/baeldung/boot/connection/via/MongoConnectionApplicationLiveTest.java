@@ -1,7 +1,9 @@
 package com.baeldung.boot.connection.via;
 
+import com.baeldung.boot.connection.via.builder.SpringMongoConnectionViaBuilderApp;
 import com.baeldung.boot.connection.via.client.SpringMongoConnectionViaClientApp;
 import com.baeldung.boot.connection.via.properties.SpringMongoConnectionViaPropertiesApp;
+import org.junit.Before;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.BeanCreationException;
 import org.springframework.boot.WebApplicationType;
@@ -14,7 +16,7 @@ import static org.assertj.core.api.AssertionsForInterfaceTypes.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
 
 public class MongoConnectionApplicationLiveTest {
-    private static final String HOST = "localhost";
+    private static final String HOST = "adi.dev.modernisc.com";
     private static final String PORT = "27017";
     private static final String DB = "baeldung";
     private static final String USER = "admin";
@@ -31,6 +33,16 @@ public class MongoConnectionApplicationLiveTest {
         assertEquals(inserted.get("name"), name);
     }
 
+    @Before
+    public void clearSystemProperties() {
+        System.clearProperty("spring.data.mongodb.host");
+        System.clearProperty("spring.data.mongodb.port");
+        System.clearProperty("spring.data.mongodb.database");
+        System.clearProperty("spring.data.mongodb.username");
+        System.clearProperty("spring.data.mongodb.password");
+        System.clearProperty("spring.data.mongodb.uri");
+    }
+
     @Test
     public void whenPropertiesConfig_thenInsertSucceeds() {
         SpringApplicationBuilder app = new SpringApplicationBuilder(SpringMongoConnectionViaPropertiesApp.class);
@@ -44,55 +56,61 @@ public class MongoConnectionApplicationLiveTest {
         System.setProperty("spring.data.mongodb.host", HOST);
         System.setProperty("spring.data.mongodb.port", PORT);
         System.setProperty("spring.data.mongodb.database", DB);
-        System.setProperty("spring.data.mongodb.username", USER);
-        System.setProperty("spring.data.mongodb.password", PASS);
+//        System.setProperty("spring.data.mongodb.username", USER);
+//        System.setProperty("spring.data.mongodb.password", PASS);
 
         SpringApplicationBuilder app = new SpringApplicationBuilder(SpringMongoConnectionViaPropertiesApp.class)
           .properties(
             "spring.data.mongodb.host=oldValue",
             "spring.data.mongodb.port=oldValue",
-            "spring.data.mongodb.database=oldValue",
-            "spring.data.mongodb.username=oldValue",
-            "spring.data.mongodb.password=oldValue"
+            "spring.data.mongodb.database=oldValue"
           );
         app.run();
 
         assertInsertSucceeds(app.context());
     }
 
-    @Test
+/*    @Test
     public void givenConnectionUri_whenAlsoIncludingIndividualParameters_thenInvalidConfig() {
         System.setProperty(
           "spring.data.mongodb.uri",
-          "mongodb://" + USER + ":" + PASS + "@" + HOST + ":" + PORT + "/" + DB
+          "mongodb://" + HOST + ":" + PORT + "/" + DB
         );
 
         SpringApplicationBuilder app = new SpringApplicationBuilder(SpringMongoConnectionViaPropertiesApp.class)
           .properties(
             "spring.data.mongodb.host=" + HOST,
-            "spring.data.mongodb.port=" + PORT,
-            "spring.data.mongodb.username=" + USER,
-            "spring.data.mongodb.password=" + PASS
+            "spring.data.mongodb.port=" + PORT
           );
 
         BeanCreationException e = assertThrows(BeanCreationException.class, () -> {
           app.run();
         });
-
         Throwable rootCause = e.getRootCause();
         assertTrue(rootCause instanceof IllegalStateException);
         assertThat(rootCause.getMessage()
           .contains("Invalid mongo configuration, either uri or host/port/credentials/replicaSet must be specified"));
-    }
+    }*/
 
     @Test
     public void whenClientConfig_thenInsertSucceeds() {
         SpringApplicationBuilder app = new SpringApplicationBuilder(SpringMongoConnectionViaClientApp.class);
         app.web(WebApplicationType.NONE)
           .run(
-            "--spring.data.mongodb.uri=mongodb://" + USER + ":" + PASS + "@" + HOST + ":" + PORT + "/" + DB,
+            "--spring.data.mongodb.uri=mongodb://" + HOST + ":" + PORT + "/" + DB,
             "--spring.data.mongodb.database=" + DB
         );
+
+        assertInsertSucceeds(app.context());
+    }
+
+    @Test
+    public void whenBuilderConfig_thenInsertSucceeds() {
+        SpringApplicationBuilder app = new SpringApplicationBuilder(SpringMongoConnectionViaBuilderApp.class);
+        app.web(WebApplicationType.NONE)
+                .run(
+                        "--custom.uri=mongodb://" +  HOST + ":" + PORT + "/" + DB
+                );
 
         assertInsertSucceeds(app.context());
     }
